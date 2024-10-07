@@ -76,7 +76,7 @@ public class InputManager {
     // Metodo per disegnare la spline cubica
     private void drawCubicSpline() {
         if (xPoints.size() >= 2 && yPoints.size() >= 2) { // Verifica che ci siano almeno 2 punti
-            curveDrawer.drawCubicSpline(drawingPane, xPoints, yPoints); // Disegna la spline cubica
+            curveDrawer.drawCurve(drawingPane); // Disegna la spline cubica
         } else {
             System.out.println("Inserisci almeno 2 punti per disegnare una curva.");
         }
