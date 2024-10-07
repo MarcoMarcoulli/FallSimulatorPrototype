@@ -1,96 +1,131 @@
 package ingdelsw.FallSimulatorPrototype;
 
+import ingdelsw.FallSimulatorPrototype.Math.CubicSpline;
+import ingdelsw.FallSimulatorPrototype.Math.Curve;
+import ingdelsw.FallSimulatorPrototype.Math.Cycloid;
+import ingdelsw.FallSimulatorPrototype.Math.Parabola;
 import javafx.application.Application;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
+import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.ComboBox;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
-public class Interface extends Application{
-	// Pannello per il disegno dei punti e delle curve
+public class Interface extends Application {
+
     private Pane drawingPane;
-    // Gestore degli input utente, responsabile della gestione dei clic e dell'interazione con la GUI
     private InputManager inputManager;
+    private Curve selectedCurve;  // Curva selezionata dall'utente
 
     @Override
     public void start(Stage primaryStage) {
-        // Configurazione del layout principale della finestra, utilizza un BorderPane
+        // Layout principale
         BorderPane root = new BorderPane();
 
-        // Configurazione del pannello di sinistra, contiene pulsanti e istruzioni
-        VBox leftPane = createLeftPane();
-        root.setLeft(leftPane);  // Aggiunge il pannello di sinistra al lato sinistro del BorderPane
+        // Pannello di controllo (a sinistra)
+        VBox controlPane = new VBox(10);
 
-        // Configurazione del pannello di destra per il disegno, dove l'utente clicca per aggiungere punti
+        // ComboBox per selezionare la curva
+        ComboBox<String> curveSelection = new ComboBox<>();
+        curveSelection.getItems().addAll("Spline Cubica", "Cicloide", "Parabola");
+        curveSelection.setValue("Spline Cubica");  // Default: Spline Cubica
+        controlPane.getChildren().add(curveSelection);
+
+        Button btnClear = new Button("Cancella Tutto");
+        Button btnStartSimulation = new Button("Avvia Simulazione");
+        controlPane.getChildren().addAll(btnClear, btnStartSimulation);
+        root.setLeft(controlPane);
+
+        // Pannello di disegno (a destra)
         drawingPane = new Pane();
-        drawingPane.setPrefSize(600, 600);  // Imposta le dimensioni preferite del pannello di disegno
-        drawingPane.setStyle("-fx-border-color: black;");  // Aggiunge un bordo al pannello per separarlo visivamente
-        root.setCenter(drawingPane);  // Aggiunge il pannello di disegno al centro del BorderPane
+        drawingPane.setStyle("-fx-background-color: white;");
+        root.setCenter(drawingPane);
 
-        // Creazione della scena con dimensioni 800x600 e aggiunta del root BorderPane
+        // Inizializzazione InputManager
+        inputManager = new InputManager();
+
+        // Gestione del click sul pannello di disegno
+        drawingPane.setOnMouseClicked(this::handleMouseClick);
+
+        // Eventi per i pulsanti
+        btnClear.setOnAction(e -> clearDrawing());
+
+        // Listener per selezionare la curva
+        curveSelection.setOnAction(e -> {
+            String selected = curveSelection.getValue();
+            if (selected.equals("Spline Cubica")) {
+                if (inputManager.getPointCount() >= 2) {
+                    selectedCurve = new CubicSpline(inputManager);
+                    selectedCurve.drawCurve(drawingPane);
+                }
+            } else if (selected.equals("Cicloide")) {
+                if (inputManager.getPointCount() >= 2) {
+                    Point2D startPoint = inputManager.getPoints().get(0);
+                    Point2D endPoint = inputManager.getPoints().get(1);
+                    selectedCurve = new Cycloid(startPoint, endPoint);
+                    selectedCurve.drawCurve(drawingPane);
+                }
+            } else if (selected.equals("Parabola")) {
+                if (inputManager.getPointCount() >= 2) {
+                    Point2D startPoint = inputManager.getPoints().get(0);
+                    Point2D endPoint = inputManager.getPoints().get(1);
+                    selectedCurve = new Parabola(startPoint, endPoint);
+                    selectedCurve.drawCurve(drawingPane);
+                }
+            }
+        });
+
+        // Evento per avviare la simulazione
+        btnStartSimulation.setOnAction(e -> {
+            if (inputManager.getPointCount() >= 2 && selectedCurve != null) {  // Controlla che ci siano punti e una curva selezionata
+                Point2D startPoint = inputManager.getPoints().get(0);
+                
+                // Crea la massa
+                Mass fallingMass = new Mass(startPoint, 10);  // Raggio della massa impostato a 10
+
+                // Crea il SimulationManager e avvia la simulazione
+                SimulationManager simulation = new SimulationManager(fallingMass, selectedCurve, drawingPane);
+                simulation.startSimulation();
+            }
+        });
+
+        // Configura la scena
         Scene scene = new Scene(root, 800, 600);
-        primaryStage.setTitle("Fall along curves Simulator");  // Imposta il titolo della finestra
-        primaryStage.setScene(scene);  // Imposta la scena principale
-        primaryStage.show();  // Mostra la finestra principale
-
-        // Inizializzazione dell'InputManager con il pannello di disegno e i pulsanti
-        inputManager = new InputManager(drawingPane, getResetButton(), getDrawButton());
+        primaryStage.setTitle("Simulatore di Curve");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
-    // Metodo per creare il pannello di sinistra con i pulsanti e le istruzioni
-    private VBox createLeftPane() {
-        VBox leftPane = new VBox(10);  // Layout verticale con spaziatura di 10px tra i nodi
-        leftPane.setPadding(new Insets(10));  // Imposta un padding interno di 10px
-        leftPane.setPrefWidth(200);  // Imposta la larghezza preferita a 200px
-        leftPane.setStyle("-fx-border-color: black;");  // Aggiunge un bordo al pannello
-
-        // Creazione dell'etichetta per le istruzioni
-        Label instructionsLabel = new Label("Inserisci i punti cliccando\nsul pannello a destra.");
-        instructionsLabel.setWrapText(true);  // Consente il testo su più righe
-
-        // Creazione dei pulsanti per resettare i punti e disegnare la spline
-        Button resetButton = new Button("Resetta Punti");
-        Button drawButton = new Button("Fine Immissione");
-
-        // Salva i pulsanti nei rispettivi campi in modo che possano essere usati in InputManager
-        setResetButton(resetButton);
-        setDrawButton(drawButton);
-
-        // Allineamento al top e aggiunta dei componenti al pannello di sinistra
-        leftPane.setAlignment(Pos.TOP_CENTER);
-        leftPane.getChildren().addAll(instructionsLabel, resetButton, drawButton);
-        return leftPane;  // Restituisce il pannello configurato
+ // Gestione dei click per selezionare i punti
+    private void handleMouseClick(MouseEvent event) {
+        double x = event.getX();
+        double y = event.getY();
+        
+        // Aggiungi il punto al gestore dell'input
+        inputManager.addPoint(new Point2D(x, y));
+        
+        // Disegna un cerchiolino rosso sul pannello
+        Circle point = new Circle(x, y, 5, Color.RED);  // Cerchiolino di raggio 5 con colore rosso
+        drawingPane.getChildren().add(point);
     }
 
-    // Metodo per memorizzare il pulsante reset in un campo per essere usato in InputManager
-    private Button resetButton;
-    private void setResetButton(Button resetButton) {
-        this.resetButton = resetButton;
-    }
-    private Button getResetButton() {
-        return this.resetButton;
-    }
-
-    // Metodo per memorizzare il pulsante draw in un campo per essere usato in InputManager
-    private Button drawButton;
-    private void setDrawButton(Button drawButton) {
-        this.drawButton = drawButton;
-    }
-    private Button getDrawButton() {
-        return this.drawButton;
+    // Cancella tutto dal pannello di disegno
+    private void clearDrawing() {
+        inputManager.clearPoints();
+        drawingPane.getChildren().clear();
+        selectedCurve = null;  // Resetta la curva selezionata
     }
 
     public static void main(String[] args) {
-        // Metodo main che avvia l'applicazione JavaFX
         launch(args);
     }
-
-	
-
 }
+
+
+
