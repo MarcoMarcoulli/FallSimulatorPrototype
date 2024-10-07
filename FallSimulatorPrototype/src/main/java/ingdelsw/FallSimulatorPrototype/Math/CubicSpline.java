@@ -25,7 +25,7 @@ public class CubicSpline extends Curve {
 
     // Calcolo della spline cubica utilizzando Apache Commons Math
     private void calculateSpline(InputManager inputManager) {
-        int n = inputManager.getPointCount();
+        int n = inputManager.getNumberOfPoints();
         double[] t = new double[n];  // Parametro t per interpolare
         double[] x = new double[n];  // Coordinate X dei punti
         double[] y = new double[n];  // Coordinate Y dei punti

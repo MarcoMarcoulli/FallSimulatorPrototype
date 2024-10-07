@@ -43,7 +43,7 @@ public class InputManager {
     }
 
     // Metodo per ottenere il numero di punti
-    public int getPointCount() {
+    public int getNumberOfPoints() {
         return points.size();
     }
 
